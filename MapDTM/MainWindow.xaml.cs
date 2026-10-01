@@ -11,12 +11,10 @@ namespace MapDTM {
   /// </summary>
   public partial class MainWindow : Window {
     const string MapHost = "mapdtm.local";
+    private GDALDTMFetcher gdalDTM;
 
     /// <summary>Points picked on the map, in click order.</summary>
     public List<PointData> Points { get; } = new();
-
-    /// <summary>Altitude source. Replace the dummy with the real DTM library implementation.</summary>
-    public IDtmProvider Dtm { get; set; } = new DummyDtmProvider();
 
     public MainWindow() {
       InitializeComponent();
@@ -25,8 +23,15 @@ namespace MapDTM {
       Loaded += async (_, _) => await InitMapAsync();
     }
 
+    private void OnWindowLoaded(object sender, RoutedEventArgs e) {
+      string onedriveFolder = Environment.GetEnvironmentVariable("OneDrive");
+      string filePath = Path.Combine(onedriveFolder, @"Projects\DTM\israel_hh.tif");
+      gdalDTM = new GDALDTMFetcher();
+      if (!gdalDTM.Init(filePath)) {
+        MessageBox.Show("Failed to initialize GDAL DTM fetcher.");
+      }
+    }
     #region Map
-
     async Task InitMapAsync() {
       try {
         string userDataFolder = Path.Combine(
@@ -70,7 +75,6 @@ namespace MapDTM {
     #endregion
 
     #region Points
-
     void AddPoint(double lat, double lon) {
       double dist = 0;
       if (Points.Count > 0) {
@@ -109,26 +113,6 @@ namespace MapDTM {
         return;
       }
 
-      CalculateButton.IsEnabled = false;
-      SetStatus("Calculating altitudes...");
-      try {
-        var dtm = Dtm;
-        var pts = Points.ToList();
-        var alts = await Task.Run(() => pts.Select(p => dtm.GetAltitude(p.Lat, p.Lon)).ToArray());
-        for (int i = 0; i < pts.Count; i++)
-          pts[i].Alt = alts[i];
-
-        PointsGrid.Items.Refresh();
-        PlotProfile();
-        SetStatus($"Calculated {pts.Count} altitude(s).");
-      }
-      catch (Exception ex) {
-        SetStatus("Calculation failed.");
-        System.Windows.MessageBox.Show(this, ex.Message, "Calculate", MessageBoxButton.OK, MessageBoxImage.Error);
-      }
-      finally {
-        CalculateButton.IsEnabled = true;
-      }
     }
 
     void SetStatus(string text) => StatusText.Text = text;
@@ -170,5 +154,6 @@ namespace MapDTM {
     }
 
     #endregion
+
   }
 }

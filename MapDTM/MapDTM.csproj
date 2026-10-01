@@ -16,6 +16,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="MaxRev.Gdal.Core" Version="3.13.3.580" />
+    <PackageReference Include="MaxRev.Gdal.WindowsRuntime.Minimal" Version="3.13.3.580" />
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4258.31" />
     <PackageReference Include="ZedGraph" Version="5.2.1" />
   </ItemGroup>

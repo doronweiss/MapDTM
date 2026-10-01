@@ -8,7 +8,8 @@
         xmlns:wf="clr-namespace:System.Windows.Forms.Integration;assembly=WindowsFormsIntegration"
         xmlns:zg="clr-namespace:ZedGraph;assembly=ZedGraph"
         mc:Ignorable="d"
-        Title="MapDTM" Height="850" Width="1300" WindowStartupLocation="CenterScreen">
+        Title="MapDTM" Height="850" Width="1300" WindowStartupLocation="CenterScreen"
+        Loaded="OnWindowLoaded">
   <Grid>
     <Grid.ColumnDefinitions>
       <ColumnDefinition Width="*" />
@@ -42,7 +43,8 @@
       <StackPanel DockPanel.Dock="Bottom" Margin="0,6,0,0">
         <TextBlock x:Name="StatusText" Margin="0,0,0,6" TextWrapping="Wrap" Foreground="Gray" />
         <UniformGrid Columns="3">
-          <Button x:Name="CalculateButton" Content="Calculate" Margin="0,0,3,0" Padding="4" FontWeight="Bold" Click="CalculateButton_Click" />
+          <Button x:Name="CalculateButton" Content="Calculate" Margin="0,0,3,0" 
+                  Padding="4" FontWeight="Bold" Click="CalculateButton_Click" />
           <Button Content="Undo last" Margin="3,0" Padding="4" Click="UndoButton_Click" />
           <Button Content="Clear" Margin="3,0,0,0" Padding="4" Click="ClearButton_Click" />
         </UniformGrid>
