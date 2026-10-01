@@ -13,6 +13,34 @@ namespace MapDTM {
       return 2 * EarthRadius * Math.Asin(Math.Min(1, Math.Sqrt(a)));
     }
 
+    /// <summary>
+    /// Resamples a path every <paramref name="step"/> meters (measured along the path, using PointData.Dist).
+    /// Positions are linearly interpolated in lat/lon within each segment, which is accurate enough for short segments.
+    /// The last point of the path is always included.
+    /// </summary>
+    public static List<(double Dist, double Lat, double Lon)> ResamplePath(IReadOnlyList<PointData> path, double step) {
+      var result = new List<(double Dist, double Lat, double Lon)>();
+      if (path.Count == 0)
+        return result;
+
+      double d = 0;
+      for (int i = 0; i < path.Count - 1; i++) {
+        var a = path[i];
+        var b = path[i + 1];
+        double len = b.Dist - a.Dist;
+        if (len <= 0)
+          continue;
+        for (; d < b.Dist; d += step) {
+          double t = (d - a.Dist) / len;
+          result.Add((d, a.Lat + t * (b.Lat - a.Lat), a.Lon + t * (b.Lon - a.Lon)));
+        }
+      }
+
+      var last = path[^1];
+      result.Add((last.Dist, last.Lat, last.Lon));
+      return result;
+    }
+
     static double ToRad(double deg) => deg * Math.PI / 180.0;
   }
 }

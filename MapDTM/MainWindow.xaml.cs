@@ -1,8 +1,9 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.IO;
 using System.Text.Json;
 using System.Windows;
 using Microsoft.Web.WebView2.Core;
+using MaxRev.Gdal.Core;
 using ZedGraph;
 
 namespace MapDTM {
@@ -11,7 +12,11 @@ namespace MapDTM {
   /// </summary>
   public partial class MainWindow : Window {
     const string MapHost = "mapdtm.local";
-    private GDALDTMFetcher gdalDTM;
+    const double ProfileStep = 10; // profile sampling interval [m]
+    private GDALDTMFetcher? gdalDTM;
+
+    /// <summary>Last calculated profile: altitude [m] every ProfileStep meters along the path. NaN where the DTM has no data.</summary>
+    List<(double Dist, double Alt)> profile = new();
 
     /// <summary>Points picked on the map, in click order.</summary>
     public List<PointData> Points { get; } = new();
@@ -26,6 +31,7 @@ namespace MapDTM {
     private void OnWindowLoaded(object sender, RoutedEventArgs e) {
       string onedriveFolder = Environment.GetEnvironmentVariable("OneDrive");
       string filePath = Path.Combine(onedriveFolder, @"Projects\DTM\israel_hh.tif");
+      GdalBase.ConfigureAll(); // MaxRev.Gdal: load native GDAL and register drivers before any Gdal call
       gdalDTM = new GDALDTMFetcher();
       if (!gdalDTM.Init(filePath)) {
         MessageBox.Show("Failed to initialize GDAL DTM fetcher.");
@@ -95,6 +101,7 @@ namespace MapDTM {
       Points.RemoveAt(Points.Count - 1);
       PointsGrid.Items.Refresh();
       _ = RunMapScript("removeLastPoint()");
+      profile.Clear();
       PlotProfile();
       SetStatus($"{Points.Count} point(s).");
     }
@@ -103,6 +110,7 @@ namespace MapDTM {
       Points.Clear();
       PointsGrid.Items.Refresh();
       _ = RunMapScript("clearPoints()");
+      profile.Clear();
       PlotProfile();
       SetStatus("Cleared. Click the map to add points.");
     }
@@ -112,7 +120,40 @@ namespace MapDTM {
         SetStatus("Add at least 2 points before calculating.");
         return;
       }
+      var dtm = gdalDTM;
+      if (dtm == null) {
+        SetStatus("DTM is not loaded.");
+        return;
+      }
 
+      CalculateButton.IsEnabled = false;
+      SetStatus("Calculating profile...");
+      try {
+        var pts = Points.ToList();
+        var (newProfile, pointAlts) = await Task.Run(() => {
+          var samples = GeoUtils.ResamplePath(pts, ProfileStep);
+          var prof = samples.Select(s => (s.Dist, dtm.GetAltitude(s.Lat, s.Lon) ?? double.NaN)).ToList();
+          var alts = pts.Select(p => dtm.GetAltitude(p.Lat, p.Lon)).ToArray();
+          return (prof, alts);
+        });
+
+        for (int i = 0; i < pts.Count; i++)
+          pts[i].Alt = pointAlts[i];
+        profile = newProfile;
+
+        PointsGrid.Items.Refresh();
+        PlotProfile();
+        int missing = profile.Count(p => double.IsNaN(p.Alt));
+        SetStatus($"Profile: {profile.Count} samples every {ProfileStep} m" +
+                  (missing > 0 ? $", {missing} outside the DTM." : "."));
+      }
+      catch (Exception ex) {
+        SetStatus("Calculation failed.");
+        MessageBox.Show(this, ex.Message, "Calculate", MessageBoxButton.OK, MessageBoxImage.Error);
+      }
+      finally {
+        CalculateButton.IsEnabled = true;
+      }
     }
 
     void SetStatus(string text) => StatusText.Text = text;
@@ -137,16 +178,23 @@ namespace MapDTM {
       var pane = ProfileGraph.GraphPane;
       pane.CurveList.Clear();
 
-      var list = new PointPairList();
-      foreach (var p in Points.Where(p => p.Alt.HasValue))
-        list.Add(p.Dist, p.Alt!.Value);
-
-      if (list.Count > 0) {
-        var curve = pane.AddCurve("Altitude", list, System.Drawing.Color.SaddleBrown, SymbolType.Circle);
+      if (profile.Count > 0) {
+        // Terrain profile; samples outside the DTM become gaps
+        var terrain = new PointPairList();
+        foreach (var (dist, alt) in profile)
+          terrain.Add(dist, double.IsNaN(alt) ? PointPair.Missing : alt);
+        var curve = pane.AddCurve("Altitude", terrain, System.Drawing.Color.SaddleBrown, SymbolType.None);
         curve.Line.Width = 2;
         curve.Line.Fill = new Fill(System.Drawing.Color.FromArgb(120, System.Drawing.Color.Peru));
-        curve.Symbol.Size = 5;
-        curve.Symbol.Fill = new Fill(System.Drawing.Color.White);
+
+        // Clicked points
+        var clicked = new PointPairList();
+        foreach (var p in Points.Where(p => p.Alt.HasValue))
+          clicked.Add(p.Dist, p.Alt!.Value);
+        var marks = pane.AddCurve("Points", clicked, System.Drawing.Color.Red, SymbolType.Circle);
+        marks.Line.IsVisible = false;
+        marks.Symbol.Size = 7;
+        marks.Symbol.Fill = new Fill(System.Drawing.Color.White);
       }
 
       ProfileGraph.AxisChange();
