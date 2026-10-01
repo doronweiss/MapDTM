@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>MapDTM</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    html, body, #map { height: 100%; margin: 0; padding: 0; }
+    #map { cursor: crosshair; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <script>
+    const layers = {
+      'OpenStreetMap': L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      }),
+      'Topographic': L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+        maxZoom: 17,
+        subdomains: ['a', 'b', 'c'],
+        attribution: 'Map data &copy; OpenStreetMap contributors, SRTM | Style &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (CC-BY-SA)'
+      }),
+      'Satellite': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19,
+        attribution: 'Imagery &copy; Esri, Maxar, Earthstar Geographics'
+      })
+    };
+
+    const map = L.map('map', { layers: [layers['OpenStreetMap']] }).setView([31.5, 34.9], 8);
+    L.control.layers(layers).addTo(map);
+    L.control.scale({ metric: true, imperial: false }).addTo(map);
+
+    const markers = [];
+    const path = L.polyline([], { color: '#ff3300', weight: 3 }).addTo(map);
+
+    function post(msg) {
+      if (window.chrome && window.chrome.webview) {
+        window.chrome.webview.postMessage(msg);
+      }
+    }
+
+    map.on('click', function (e) {
+      post({ type: 'click', lat: e.latlng.lat, lon: e.latlng.lng });
+    });
+
+    // ---- Called from C# ----
+
+    function addPoint(lat, lon, label) {
+      const m = L.circleMarker([lat, lon], {
+        radius: 5, color: '#ffffff', weight: 2, fillColor: '#ff3300', fillOpacity: 1
+      }).addTo(map);
+      m.bindTooltip(String(label));
+      markers.push(m);
+      path.addLatLng([lat, lon]);
+    }
+
+    function removeLastPoint() {
+      const m = markers.pop();
+      if (m) map.removeLayer(m);
+      const pts = path.getLatLngs();
+      pts.pop();
+      path.setLatLngs(pts);
+    }
+
+    function clearPoints() {
+      markers.forEach(m => map.removeLayer(m));
+      markers.length = 0;
+      path.setLatLngs([]);
+    }
+
+    post({ type: 'ready' });
+  </script>
+</body>
+</html>
