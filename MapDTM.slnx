@@ -1,3 +1,5 @@
 <Solution>
+  <Project Path="DTMLibTester/DTMLibTester.csproj" Id="37029722-e551-47a8-beb0-030a30ff6b60" />
+  <Project Path="DTMServerLib/DTMServerLib.csproj" Id="70c79950-0e09-4df1-8626-ddc064ad2e0d" />
   <Project Path="MapDTM/MapDTM.csproj" />
 </Solution>

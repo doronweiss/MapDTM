@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "DTMLibTester": {
+      "commandName": "Project",
+      "workingDirectory": "../run_dir"
+    }
+  }
+}
