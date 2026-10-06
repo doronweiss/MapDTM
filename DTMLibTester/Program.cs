@@ -35,7 +35,10 @@ namespace DTMLibTester {
       };
       var (prepRes, count) = dtmSvcs.PrepFilesForPth(track);
       Console.WriteLine($"Preparation of files for path {(prepRes ? "successful" : "failed")}, {count} datasets loaded.");
-
+      double [] altitudes = dtmSvcs.GetDTMData(track);
+      for (int idx=0; idx< altitudes.Length; idx++) {
+        Console.WriteLine($"Point {idx}: Latitude: {track[idx].latitude}, Longitude: {track[idx].longitude}, Altitude: {altitudes[idx]}");
+      }
       dtmSvcs.UnInit();
     }
   }

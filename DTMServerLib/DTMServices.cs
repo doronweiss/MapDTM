@@ -60,7 +60,21 @@ public class DTMServices {
     return (true, dtmCatalog.Count(x => x.dataSet != null));
   }
 
-  public bool CreateCatalog () {
+  public double[] GetDTMData(List<GeoPoint> track) {
+    double[] altitudes = new double[track.Count];
+    for (int i = 0; i < track.Count; i++) {
+      GeoPoint gp = track[i];
+      foreach (GeoTiffDescriptor descriptor in dtmCatalog) {
+        if (descriptor.Contains(gp.latitude, gp.longitude)) {
+          altitudes[i] = descriptor.GetAltitude(gp.latitude, gp.longitude) ?? 0;
+          break;
+        }
+      }
+    }
+    return altitudes;
+  }
+
+  public bool CreateCatalog() {
     if (!Directory.Exists(tiffsFolder)) {
       return false;
     }

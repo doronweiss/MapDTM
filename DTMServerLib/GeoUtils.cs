@@ -62,6 +62,24 @@ public class GeoTiffDescriptor {
             longitude >= transform.topLeftLongitude && longitude <= transform.bottomRightLongitude);
   }
 
+  public double? GetAltitude(double lat, double lon) {
+    if (dataSet == null)
+      return null;
+    // Check if the point is within the bounds of the dataset
+    if (lon < transform.topLeftLongitude || lon > transform.bottomRightLongitude ||
+        lat > transform.topLeftLatitude || lat < transform.bottomRightLatitude) {
+      return null; // Point is outside the bounds
+    }
+    // Calculate pixel coordinates
+    int pixelX = (int)((lon - transform.topLeftLongitude) / transform.pixelWidth);
+    int pixelY = (int)((transform.topLeftLatitude - lat) / Math.Abs(transform.pixelHeight));
+    // Read the altitude value from the dataset
+    Band band = dataSet.GetRasterBand(1); // Assuming single-band DTM
+    float[] buffer = new float[1];
+    band.ReadRaster(pixelX, pixelY, 1, 1, buffer, 1, 1, 0, 0);
+    return buffer[0];
+  }
+
   public void Dispose() => dataSet?.Dispose();
 }
 
