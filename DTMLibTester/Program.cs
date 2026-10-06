@@ -3,11 +3,13 @@
 namespace DTMLibTester {
   internal class Program {
     static void Main(string[] args) {
+      bool res = false;
       string onedriveFolder = Environment.GetEnvironmentVariable("OneDrive");
       string dtmFolder = Path.Combine(onedriveFolder, @"Projects\DTM");
       DTMServices dtmSvcs = new DTMServices();
-      InitResult res = dtmSvcs.Init(dtmFolder);
-      switch (res) {
+      // init
+      InitResult initRes = dtmSvcs.Init(dtmFolder);
+      switch (initRes) {
         case InitResult.Success:
           Console.WriteLine("Initialization successful.");
           break;
@@ -15,8 +17,8 @@ namespace DTMLibTester {
           Console.WriteLine("Directory not found.");
           break;
         case InitResult.NoCatalog:
-          bool tres = dtmSvcs.CreateCatalog();
-          Console.WriteLine($"Catalog creation {(tres ? "successful" : "failed")}.");
+          res = dtmSvcs.CreateCatalog();
+          Console.WriteLine($"Catalog creation {(res ? "successful" : "failed")}.");
           break;
         case InitResult.ErrorReadingCatalog:
           Console.WriteLine("Error reading catalog.");
@@ -25,6 +27,16 @@ namespace DTMLibTester {
           Console.WriteLine("Unknown result.");
           break;
       }
+      // load datasets
+      List<GeoPoint> track = new List<GeoPoint> {
+        new GeoPoint() { latitude = 31.823198, longitude = 34.171192 }, new GeoPoint() { latitude = 31.84186, longitude = 35.22632 },
+        new GeoPoint() { latitude = 31.242846, longitude = 35.907753 }, new GeoPoint() { latitude = 33.28569, longitude = 36.413334 },
+        new GeoPoint() { latitude = 33.78003, longitude = 35.84181 }
+      };
+      var (prepRes, count) = dtmSvcs.PrepFilesForPth(track);
+      Console.WriteLine($"Preparation of files for path {(prepRes ? "successful" : "failed")}, {count} datasets loaded.");
+
+      dtmSvcs.UnInit();
     }
   }
 }

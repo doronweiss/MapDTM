@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+﻿using System.Drawing;
+using System.Globalization;
 using System.IO;
 using System.Text.Json;
 using System.Windows;
@@ -72,8 +73,7 @@ public partial class MainWindow : Window {
       MapView.CoreWebView2.WebMessageReceived += MapView_WebMessageReceived;
       MapView.CoreWebView2.Navigate($"https://{MapHost}/map.html");
       SetStatus("Loading map...");
-    }
-    catch (Exception ex) {
+    } catch (Exception ex) {
       System.Windows.MessageBox.Show(this, "Failed to initialize the map (is the WebView2 runtime installed?)\n\n" + ex.Message,
         "MapDTM", MessageBoxButton.OK, MessageBoxImage.Error);
     }
@@ -175,12 +175,10 @@ public partial class MainWindow : Window {
         (missing > 0 ? $", {missing} outside the DTM." : "."));
       MessageBox.Show(this, $"Calculation completed in {time:F0} ms for {pcnt} point(s).", "Calculate", MessageBoxButton.OK,
         MessageBoxImage.Information);
-    }
-    catch (Exception ex) {
+    } catch (Exception ex) {
       SetStatus("Calculation failed.");
       MessageBox.Show(this, ex.Message, "Calculate", MessageBoxButton.OK, MessageBoxImage.Error);
-    }
-    finally {
+    } finally {
       CalculateButton.IsEnabled = true;
     }
   }
@@ -232,4 +230,9 @@ public partial class MainWindow : Window {
 
   #endregion
 
+  private void ExportButton_Click(object sender, RoutedEventArgs e) {
+    List<PointF> copies = Points.Select(x => new PointF((float)x.Lat, (float)x.Lon)).ToList();
+    string pathStr = string.Join(",", copies.Select(p => $"new GeoPoint() {{latitude={p.X},longitude={p.Y}}}"));
+    Clipboard.SetText(pathStr);
+  }
 }

@@ -47,6 +47,7 @@
                   Padding="4" FontWeight="Bold" Click="CalculateButton_Click" />
           <Button Content="Undo last" Margin="3,0" Padding="4" Click="UndoButton_Click" />
           <Button Content="Clear" Margin="3,0,0,0" Padding="4" Click="ClearButton_Click" />
+          <Button Content="Export" Margin="3,0,0,0" Padding="4" Click="ExportButton_Click" />
         </UniformGrid>
       </StackPanel>
 

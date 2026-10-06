@@ -1,5 +1,6 @@
 ﻿using MaxRev.Gdal.Core;
 using Newtonsoft.Json;
+using OSGeo.GDAL;
 
 namespace DTMServerLib;
 
@@ -32,6 +33,31 @@ public class DTMServices {
     } catch {
       return InitResult.ErrorReadingCatalog;
     }
+  }
+
+  public void UnInit() {
+    if (dtmCatalog == null)
+      return;
+    foreach (var descriptor in dtmCatalog) {
+      descriptor.Dispose();
+    }
+  }
+
+  public (bool, int) PrepFilesForPth(List<GeoPoint> track) {
+    List<GeoPoint> resampled = GeoUtils.ResamplePath(track, 100.0);
+    foreach (GeoPoint gp in resampled) {
+      bool found = false;
+      foreach (GeoTiffDescriptor descriptor in dtmCatalog) {
+        if (descriptor.Contains(gp.latitude, gp.longitude)) {
+          found = true;
+          descriptor.dataSet ??= Gdal.Open(descriptor.fileName, Access.GA_ReadOnly);
+          break;
+        }
+      }
+      if (!found)
+        return (false, 0);
+    }
+    return (true, dtmCatalog.Count(x => x.dataSet != null));
   }
 
   public bool CreateCatalog () {
