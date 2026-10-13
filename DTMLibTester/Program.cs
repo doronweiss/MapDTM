@@ -15,14 +15,14 @@ namespace DTMLibTester {
           break;
         case InitResult.DirectoryNotFound:
           Console.WriteLine("Directory not found.");
-          break;
+          return;
         case InitResult.NoCatalog:
           res = dtmSvcs.CreateCatalog();
           Console.WriteLine($"Catalog creation {(res ? "successful" : "failed")}.");
-          break;
+          return;
         case InitResult.ErrorReadingCatalog:
           Console.WriteLine("Error reading catalog.");
-          break;
+          return;
         default:
           Console.WriteLine("Unknown result.");
           break;
