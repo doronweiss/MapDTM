@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "MapDTM": {
+      "commandName": "Project",
+      "workingDirectory": "../run_dir_mapdtm"
+    }
+  }
+}

@@ -6,6 +6,7 @@ using System.Windows;
 using Microsoft.Web.WebView2.Core;
 using MaxRev.Gdal.Core;
 using ZedGraph;
+using Point = System.Drawing.Point;
 
 namespace MapDTM;
 
@@ -234,5 +235,43 @@ public partial class MainWindow : Window {
     List<PointF> copies = Points.Select(x => new PointF((float)x.Lat, (float)x.Lon)).ToList();
     string pathStr = string.Join(",", copies.Select(p => $"new GeoPoint() {{latitude={p.X},longitude={p.Y}}}"));
     Clipboard.SetText(pathStr);
+  }
+
+  private void WPFileClicked(object sender, RoutedEventArgs e) {
+    if (Points.Count<3) {
+      MessageBox.Show("At least 3 points are required to create a waypoint file.");
+      return;
+    }
+    List<string> waypointsStrs = new List<string>();
+    for (int idx = 0; idx < Points.Count; idx++) {
+      var p = Points[idx];
+      WayPoint wp = new WayPoint {
+        index = idx,
+        isStartPoint = (idx == 0),
+        aboveMSL = (idx == 0),
+        commandId = idx switch {
+          0 => 16, // takeoff
+          1 => 22, // loiter
+          _ => 16 // waypoint
+        },
+        param1 = idx switch {
+          2 => 80, 
+          _ => 0
+        },
+        param2 = 0,
+        param3 = 0,
+        param4 = 0,
+        latitude = p.Lat,
+        longitude = p.Lon,
+        altitude = idx switch{
+          0 => 0, // takeoff
+          1 => 0, // loiter
+          _ => 400 // waypoint
+        },
+        autoContinue = (idx != 0)
+      };
+      waypointsStrs.Add(wp.MakeMavlinkWP());
+    }
+    File.WriteAllLines("waypoints.csv", waypointsStrs);
   }
 }
