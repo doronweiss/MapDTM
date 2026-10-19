@@ -27,20 +27,45 @@ internal class WayPoint {
     };
   }
 
+  /// <summary>
+  /// Parses one MAVLink waypoint line (QGC WPL 110 layout, tab or space separated):
+  /// index current frame command p1 p2 p3 p4 lat lon alt autocontinue.
+  /// Returns null for headers, comments and malformed lines.
+  /// </summary>
+  public static WayPoint? FromMavlinkWP(string line) {
+    var f = line.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+    if (f.Length < 12)
+      return null;
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+    var d = new double[12];
+    for (int i = 0; i < 12; i++)
+      if (!double.TryParse(f[i], System.Globalization.NumberStyles.Float, inv, out d[i]))
+        return null;
+    return new WayPoint() {
+      index = (int)d[0], isStartPoint = d[1] != 0, aboveMSL = d[2] == 0, commandId = (int)d[3],
+      param1 = d[4], param2 = d[5], param3 = d[6], param4 = d[7],
+      latitude = d[8], longitude = d[9], altitude = d[10],
+      autoContinue = d[11] == 1
+    };
+  }
+
+  /// <summary>
+  /// Formats the waypoint as one QGC WPL 110 line (tab separated, invariant culture).
+  /// </summary>
   public string MakeMavlinkWP() {
-    StringBuilder sb = new();
-    sb.Append($"{index} ");
-    sb.Append($"{(isStartPoint ? 1 : 0)} ");
-    sb.Append($"{(aboveMSL ? 0 : 3)} ");
-    sb.Append($"{commandId} ");
-    sb.Append($"{param1:F6} ");
-    sb.Append($"{param2:F6} ");
-    sb.Append($"{param3:F6} ");
-    sb.Append($"{param4:F6} ");
-    sb.Append($"{latitude:F6} ");
-    sb.Append($"{longitude:F6} ");
-    sb.Append($"{altitude:F6} ");
-    sb.Append($"{(autoContinue ? 1 : 20)}");
-    return sb.ToString();
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+    return string.Join("\t",
+      index.ToString(inv),
+      isStartPoint ? "1" : "0",
+      aboveMSL ? "0" : "3",
+      commandId.ToString(inv),
+      param1.ToString("F8", inv),
+      param2.ToString("F8", inv),
+      param3.ToString("F8", inv),
+      param4.ToString("F8", inv),
+      latitude.ToString("F8", inv),
+      longitude.ToString("F8", inv),
+      altitude.ToString("F6", inv),
+      autoContinue ? "1" : "20");
   }
 }

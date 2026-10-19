@@ -65,6 +65,11 @@
       path.setLatLngs(pts);
     }
 
+    function fitPoints() {
+      if (markers.length > 0)
+        map.fitBounds(path.getBounds(), { padding: [30, 30], maxZoom: 17 });
+    }
+
     function clearPoints() {
       markers.forEach(m => map.removeLayer(m));
       markers.length = 0;

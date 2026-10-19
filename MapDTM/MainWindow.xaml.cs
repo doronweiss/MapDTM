@@ -130,12 +130,53 @@ public partial class MainWindow : Window {
   }
 
   void ClearButton_Click(object sender, RoutedEventArgs e) {
+    ClearPoints();
+    SetStatus("Cleared. Click the map to add points.");
+  }
+
+  void ClearPoints() {
     Points.Clear();
     PointsGrid.Items.Refresh();
     _ = RunMapScript("clearPoints()");
     profile.Clear();
     PlotProfile();
-    SetStatus("Cleared. Click the map to add points.");
+  }
+
+  // Load a MAVLink waypoints file and replace the current points with its lat/lon
+  void DisplayButton_Click(object sender, RoutedEventArgs e) {
+    var dlg = new Microsoft.Win32.OpenFileDialog {
+      Title = "Open MAVLink waypoints file",
+      Filter = "Waypoint files (*.csv;*.waypoints;*.txt)|*.csv;*.waypoints;*.txt|All files (*.*)|*.*"
+    };
+    if (dlg.ShowDialog(this) != true)
+      return;
+
+    List<WayPoint> wps;
+    try {
+      wps = File.ReadLines(dlg.FileName)
+        .Select(WayPoint.FromMavlinkWP)
+        .OfType<WayPoint>()
+        .Where(wp => wp.latitude != 0 || wp.longitude != 0) // commands without a position (RTL, speed, ...)
+        .ToList();
+    } catch (Exception ex) {
+      MessageBox.Show(this, ex.Message, "Display", MessageBoxButton.OK, MessageBoxImage.Error);
+      return;
+    }
+    if (wps.Count == 0) {
+      MessageBox.Show(this, "No waypoints with a position were found in the file.", "Display",
+        MessageBoxButton.OK, MessageBoxImage.Warning);
+      return;
+    }
+
+    ClearPoints();
+    foreach (var wp in wps) {
+      // skip consecutive duplicates (e.g. home followed by takeoff at the same spot)
+      if (Points.Count > 0 && Points[^1].Lat == wp.latitude && Points[^1].Lon == wp.longitude)
+        continue;
+      AddPoint(wp.latitude, wp.longitude);
+    }
+    _ = RunMapScript("fitPoints()");
+    SetStatus($"Loaded {Points.Count} point(s) from {Path.GetFileName(dlg.FileName)}, total {Points[^1].Dist:F0} m.");
   }
 
   async void CalculateButton_Click(object sender, RoutedEventArgs e) {
@@ -242,17 +283,18 @@ public partial class MainWindow : Window {
       MessageBox.Show("At least 3 points are required to create a waypoint file.");
       return;
     }
-    List<string> waypointsStrs = new List<string>();
-    Points.Insert(0, Points[0].Clone());
-    for (int idx = 0; idx < Points.Count; idx++) {
-      var p = Points[idx];
+    List<string> waypointsStrs = new List<string> { "QGC WPL 110" }; // file format header required by Mission Planner / QGC
+    var pts = Points.ToList(); // work on a copy so the displayed points are not modified
+    pts.Insert(0, pts[0].Clone());
+    for (int idx = 0; idx < pts.Count; idx++) {
+      var p = pts[idx];
       WayPoint wp = new WayPoint {
         index = idx,
         isStartPoint = (idx == 0),
         aboveMSL = (idx == 0),
         commandId = idx switch {
-          0 => 16, // takeoff
-          1 => 22, // loiter
+          0 => 16, // home position (written as a waypoint)
+          1 => 22, // takeoff
           _ => 16 // waypoint
         },
         param1 = idx switch {
@@ -265,8 +307,8 @@ public partial class MainWindow : Window {
         latitude = p.Lat,
         longitude = p.Lon,
         altitude = idx switch{
-          0 => 0, // takeoff
-          1 => 0, // loiter
+          0 => 0, // home
+          1 => 0, // takeoff
           _ => 400 // waypoint
         },
         autoContinue = (idx != 0)
