@@ -15,5 +15,11 @@ namespace MapDTM {
       Lat = lat;
       Lon = lon;
     }
+
+    public PointData Clone() {
+      return new PointData(Dist, Lat, Lon) {
+        Alt = Alt
+      };
+    }
   }
 }

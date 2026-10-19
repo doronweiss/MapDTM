@@ -243,6 +243,7 @@ public partial class MainWindow : Window {
       return;
     }
     List<string> waypointsStrs = new List<string>();
+    Points.Insert(0, Points[0].Clone());
     for (int idx = 0; idx < Points.Count; idx++) {
       var p = Points[idx];
       WayPoint wp = new WayPoint {
